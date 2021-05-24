@@ -23,8 +23,9 @@ import androidx.compose.ui.unit.dp
 import com.example.passman.ui.theme.PassManTheme
 import com.example.passman.ui.theme.Shapes
 import com.example.passman.ui.theme.Typography
-import com.example.passman.vault.VaultData
-import com.example.passman.vault.VaultViewModel
+import com.example.passman.presentation.vault.VaultData
+import com.example.passman.presentation.vault.VaultViewModel
+import com.example.passman.presentation.vault.passwords.Passwords
 
 
 class MainActivity : ComponentActivity() {
@@ -35,13 +36,22 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            App(vaultViewModel)
+            App(
+                vaultViewModel.vaults,
+                vaultViewModel::addPassword,
+                vaultViewModel::createVault
+            )
         }
     }
 }
 
 @Composable
-fun App(vaultViewModel: VaultViewModel, darkTheme: Boolean = isSystemInDarkTheme()) {
+fun App(
+    vaultData: List<VaultData>,
+    onPasswordAdd: (String, String, String) -> Unit,
+    onVaultCreate: (String) -> Unit,
+    darkTheme: Boolean = isSystemInDarkTheme(),
+) {
     var darkThemeState by remember { mutableStateOf(darkTheme) }
     val updateDarkThemeState = { darkThemeState = !darkThemeState }
 
@@ -53,7 +63,7 @@ fun App(vaultViewModel: VaultViewModel, darkTheme: Boolean = isSystemInDarkTheme
                 .background(if (!darkThemeState) Color.White else Color.Black)
         ) {
             TopBar(darkThemeState, updateDarkThemeState)
-            VaultList(vaultViewModel)
+            VaultList(vaultData, onPasswordAdd, onVaultCreate)
         }
     }
 }
@@ -95,8 +105,7 @@ fun Vault(
     val passwordsVisible = remember { mutableStateOf(false); }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth(0.85f)
+        Modifier.fillMaxWidth(0.85f)
     ) {
         Column(
             modifier = Modifier
@@ -165,97 +174,98 @@ fun VaultButtons(passwordsVisible: Boolean, showPasswords: () -> Unit) {
 
 
 @Composable
-fun VaultList(vaultViewModel: VaultViewModel) {
-    Spacer(modifier = Modifier.height(10.dp))
+fun VaultList(
+    vaults: List<VaultData>,
+    onPasswordAdd: (String, String, String) -> Unit,
+    onVaultCreate: (String) -> Unit
+    ) {
 
-    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-        for (vault: VaultData in vaultViewModel.vaults) {
+    val (isNewVaultDialogOpen, setOpen) = remember { mutableStateOf(false) }
+
+    AddVaultInputDialog(onVaultCreate, setOpen, isNewVaultDialogOpen)
+
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(10.dp))
+
+        for (vault: VaultData in vaults) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Vault(vault, vaultViewModel::createNewPassword)
+                Vault(vault, onPasswordAdd)
             }
             Spacer(modifier = Modifier.height(10.dp))
         }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AddVaultButton(setOpen)
+
+        Spacer(modifier = Modifier.height(10.dp))
     }
 }
 
-@Composable
-fun Passwords(
-    vaultData: VaultData,
-    onPasswordAdd: (name: String, password: String, vaultPK: String) -> Unit,
-) {
-
-    val (isPasswordInputOpen, setOpen) = remember { mutableStateOf(false) }
-
-    NewPasswordDialog(
-        isOpen = isPasswordInputOpen,
-        setOpen = setOpen,
-        vaultPK = vaultData.publicKey,
-        onPasswordAdd = onPasswordAdd
-    )
-
-    Column() {
-        for ((name, password) in vaultData.passwords) {
-            Password(name, password)
-            Divider()
-        }
-        IconButton(
-            onClick = {
-                setOpen(true)
-            },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Icon(Icons.Filled.AddCircle, contentDescription = "Add password to vault")
-        }
-    }
-}
 
 @Composable
-fun NewPasswordDialog(
-    isOpen: Boolean,
+fun AddVaultInputDialog(
+    onVaultAdd: (name: String) -> Unit,
     setOpen: (b: Boolean) -> Unit,
-    vaultPK: String,
-    onPasswordAdd: (name: String, password: String, vaultPK: String) -> Unit,
+    isOpen: Boolean,
 ) {
-
     val (name, setName) = remember { mutableStateOf("") }
-    val (password, setPassword) = remember { mutableStateOf("") }
 
     if (isOpen) {
         AlertDialog(
             onDismissRequest = { setOpen(false) },
             confirmButton = {
                 Button(onClick = {
-                    onPasswordAdd(name, password, vaultPK)
+                    onVaultAdd(name)
                     setOpen(false)
                 }) {
                     Text("Create")
                 }
             },
             title = {
-                Text("New password",
+                Text("New vault",
                     style = Typography.h6,
                     modifier = Modifier.padding(top = 10.dp, bottom = 10.dp))
             },
             text = {
-                Column(Modifier.padding(top = 10.dp, bottom = 10.dp)) {
-                    TextField(
-                        value = name,
-                        onValueChange = { setName(it) }, label = { Text("Name") }
-                    )
-                    Spacer(modifier = Modifier.height(5.dp))
-                    TextField(
-                        value = password,
-                        onValueChange = { setPassword(it) }, label = { Text("Password") }
-                    )
-                }
-            },
-            )
+                Spacer(modifier = Modifier.height(10.dp))
+                TextField(
+                    value = name,
+                    onValueChange = { setName(it) }, label = { Text("Name") }
+                )
+            }
+        )
     }
 }
+
+@Composable
+fun AddVaultButton(
+    setOpen: (b: Boolean) -> Unit,
+) {
+    Button(
+        onClick = {
+            setOpen(true);
+        },
+        colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(0.85f),
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = "Add password to vault")
+            Text("New vault")
+        }
+    }
+}
+
 
 @Composable
 fun Password(name: String, decryptedPassword: String) {

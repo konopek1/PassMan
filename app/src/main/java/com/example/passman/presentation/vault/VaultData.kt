@@ -1,4 +1,4 @@
-package com.example.passman.vault
+package com.example.passman.presentation.vault
 
 typealias PasswordsData = Map<String, String>
 

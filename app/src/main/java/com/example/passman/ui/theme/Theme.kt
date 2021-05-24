@@ -46,9 +46,6 @@ private val LightColors = lightColors(
 
 @Composable
 fun PassManTheme(darkTheme: Boolean, content: @Composable() () -> Unit) {
-    Log.println(Log.DEBUG,"((((((((((((((((","darkTheme: " + darkTheme + "system: " + isSystemInDarkTheme())
-
-
 
     val colors = if (darkTheme) {
         BlueThemeDark
