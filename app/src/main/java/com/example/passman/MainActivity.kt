@@ -1,9 +1,9 @@
 package com.example.passman
 
 import android.os.Bundle
+import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -24,22 +24,24 @@ import com.example.passman.ui.theme.PassManTheme
 import com.example.passman.ui.theme.Shapes
 import com.example.passman.ui.theme.Typography
 import com.example.passman.presentation.vault.VaultData
-import com.example.passman.presentation.vault.VaultViewModel
+import com.example.passman.Interactors.VaultViewModel
 import com.example.passman.presentation.vault.passwords.Passwords
 
 
 class MainActivity : ComponentActivity() {
 
-    val vaultViewModel by viewModels<VaultViewModel>()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val vaultViewModel = VaultViewModel(this)
 
         setContent {
             App(
                 vaultViewModel.vaults,
                 vaultViewModel::addPassword,
-                vaultViewModel::createVault
+                vaultViewModel::createVault,
+                vaultViewModel::shareVault
+            // TODO: importVault
             )
         }
     }
@@ -50,6 +52,7 @@ fun App(
     vaultData: List<VaultData>,
     onPasswordAdd: (String, String, String) -> Unit,
     onVaultCreate: (String) -> Unit,
+    onShareVault: (String) -> Unit,
     darkTheme: Boolean = isSystemInDarkTheme(),
 ) {
     var darkThemeState by remember { mutableStateOf(darkTheme) }
@@ -63,7 +66,7 @@ fun App(
                 .background(if (!darkThemeState) Color.White else Color.Black)
         ) {
             TopBar(darkThemeState, updateDarkThemeState)
-            VaultList(vaultData, onPasswordAdd, onVaultCreate)
+            VaultList(vaultData, onPasswordAdd, onVaultCreate, onShareVault)
         }
     }
 }
@@ -101,6 +104,7 @@ fun TopBar(darkTheme: Boolean, updateDarkThemeState: () -> Unit) {
 fun Vault(
     vaultData: VaultData,
     onPasswordAdd: (String, String, String) -> Unit,
+    onShareVault: (String) -> Unit,
 ) {
     val passwordsVisible = remember { mutableStateOf(false); }
 
@@ -117,7 +121,7 @@ fun Vault(
             )
 
             Text(
-                "Public key",
+                "Public Key",
                 style = Typography.caption,
                 modifier = Modifier.padding(start = 1.dp)
             )
@@ -126,19 +130,19 @@ fun Vault(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            VaultButtons(passwordsVisible.value) {
+            VaultButtons(passwordsVisible.value, {
                 passwordsVisible.value = !passwordsVisible.value
-            }
+            }, { onShareVault(vaultData.publicKey) })
         }
     }
 
 }
 
 @Composable
-fun VaultButtons(passwordsVisible: Boolean, showPasswords: () -> Unit) {
+fun VaultButtons(passwordsVisible: Boolean, showPasswords: () -> Unit, onShareVault: () -> Unit) {
     Row() {
         Button(
-            onClick = {/* doSomething() */ },
+            onClick = onShareVault,
             modifier = Modifier.defaultMinSize(0.dp, 0.dp),
             shape = Shapes.small
         ) {
@@ -177,8 +181,9 @@ fun VaultButtons(passwordsVisible: Boolean, showPasswords: () -> Unit) {
 fun VaultList(
     vaults: List<VaultData>,
     onPasswordAdd: (String, String, String) -> Unit,
-    onVaultCreate: (String) -> Unit
-    ) {
+    onVaultCreate: (String) -> Unit,
+    onShareVault: (String) -> Unit,
+) {
 
     val (isNewVaultDialogOpen, setOpen) = remember { mutableStateOf(false) }
 
@@ -196,7 +201,7 @@ fun VaultList(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Vault(vault, onPasswordAdd)
+                Vault(vault, onPasswordAdd, onShareVault)
             }
             Spacer(modifier = Modifier.height(10.dp))
         }
