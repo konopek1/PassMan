@@ -1,18 +1,7 @@
 package com.example.passman.domain
 
-import android.R.attr
-import android.security.keystore.KeyProperties
-import android.util.Log
-import java.security.KeyFactory
-import java.util.*
-import javax.crypto.Cipher
-import javax.crypto.spec.SecretKeySpec
-import android.R.attr.publicKey
-import java.security.PrivateKey
 import java.security.Signature
-import java.security.interfaces.ECPrivateKey
-import java.security.interfaces.RSAPrivateKey
-import java.security.spec.*
+import javax.crypto.Cipher
 
 
 class RSAHelper {

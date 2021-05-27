@@ -1,14 +1,12 @@
 package com.example.passman
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,6 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.passman.ui.theme.PassManTheme
@@ -25,14 +26,15 @@ import com.example.passman.ui.theme.Shapes
 import com.example.passman.ui.theme.Typography
 import com.example.passman.presentation.vault.VaultData
 import com.example.passman.Interactors.VaultViewModel
+import com.example.passman.domain.QrCodeGenerator
 import com.example.passman.presentation.vault.passwords.Passwords
+import kotlin.reflect.KMutableProperty
 
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val vaultViewModel = VaultViewModel(this)
 
         setContent {
@@ -40,11 +42,12 @@ class MainActivity : ComponentActivity() {
                 vaultViewModel.vaults,
                 vaultViewModel::addPassword,
                 vaultViewModel::createVault,
-                vaultViewModel::shareVault
-            // TODO: importVault
+                vaultViewModel::shareVault,
+                vaultViewModel.shareVaultQrCode,
             )
         }
     }
+
 }
 
 @Composable
@@ -53,6 +56,7 @@ fun App(
     onPasswordAdd: (String, String, String) -> Unit,
     onVaultCreate: (String) -> Unit,
     onShareVault: (String) -> Unit,
+    shareVaultQrCode: ImageBitmap?,
     darkTheme: Boolean = isSystemInDarkTheme(),
 ) {
     var darkThemeState by remember { mutableStateOf(darkTheme) }
@@ -66,13 +70,16 @@ fun App(
                 .background(if (!darkThemeState) Color.White else Color.Black)
         ) {
             TopBar(darkThemeState, updateDarkThemeState)
-            VaultList(vaultData, onPasswordAdd, onVaultCreate, onShareVault)
+            VaultList(vaultData, onPasswordAdd, onVaultCreate, onShareVault, shareVaultQrCode)
         }
     }
 }
 
 @Composable
 fun TopBar(darkTheme: Boolean, updateDarkThemeState: () -> Unit) {
+    val context = LocalContext.current
+
+
     TopAppBar(
         title = { Text("PassMan") },
         navigationIcon = {
@@ -81,17 +88,23 @@ fun TopBar(darkTheme: Boolean, updateDarkThemeState: () -> Unit) {
             }
         },
         actions = {
-            IconButton(onClick = { updateDarkThemeState() }) {
-                if (darkTheme) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.dark_theme),
-                        contentDescription = "Dark theme"
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_baseline_wb_sunny_24),
-                        contentDescription = "Light theme"
-                    )
+            Row() {
+                IconButton(onClick = {context.startActivity(Intent(context, QrCodeScannerActivity::class.java))}) {
+                    Icon(Icons.Filled.Call, contentDescription = "Import vault")
+                }
+        
+                IconButton(onClick = { updateDarkThemeState() }) {
+                    if (darkTheme) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.dark_theme),
+                            contentDescription = "Dark theme"
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_baseline_wb_sunny_24),
+                            contentDescription = "Light theme"
+                        )
+                    }
                 }
             }
         }
@@ -105,8 +118,10 @@ fun Vault(
     vaultData: VaultData,
     onPasswordAdd: (String, String, String) -> Unit,
     onShareVault: (String) -> Unit,
+    shareVaultQrCode: ImageBitmap?,
 ) {
-    val passwordsVisible = remember { mutableStateOf(false); }
+    val passwordsVisible = remember { mutableStateOf(false) }
+    val openQrDialog = remember { mutableStateOf(false) }
 
     Card(
         Modifier.fillMaxWidth(0.85f)
@@ -132,10 +147,40 @@ fun Vault(
 
             VaultButtons(passwordsVisible.value, {
                 passwordsVisible.value = !passwordsVisible.value
-            }, { onShareVault(vaultData.publicKey) })
+            }, {
+                onShareVault(vaultData.publicKey)
+                openQrDialog.value = true
+            })
         }
     }
 
+    ShareVaultQrCode(shareVaultQrCode, openQrDialog)
+}
+
+@Composable
+fun ShareVaultQrCode(
+    shareVaultQrCode: ImageBitmap?,
+    open: MutableState<Boolean>,
+) {
+    if (open.value && shareVaultQrCode != null) {
+        AlertDialog(
+            onDismissRequest = { open.value = !open.value },
+            title = {
+                Text("Vault private key",
+                    style = Typography.h5,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 10.dp))
+            },
+            text = {
+                Image(
+                    bitmap = shareVaultQrCode,
+                    contentDescription = "Qr code",
+                )
+            },
+            buttons = {}
+        )
+
+
+    }
 }
 
 @Composable
@@ -183,6 +228,7 @@ fun VaultList(
     onPasswordAdd: (String, String, String) -> Unit,
     onVaultCreate: (String) -> Unit,
     onShareVault: (String) -> Unit,
+    shareVaultQrCode: ImageBitmap?,
 ) {
 
     val (isNewVaultDialogOpen, setOpen) = remember { mutableStateOf(false) }
@@ -201,7 +247,7 @@ fun VaultList(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Vault(vault, onPasswordAdd, onShareVault)
+                Vault(vault, onPasswordAdd, onShareVault, shareVaultQrCode)
             }
             Spacer(modifier = Modifier.height(10.dp))
         }

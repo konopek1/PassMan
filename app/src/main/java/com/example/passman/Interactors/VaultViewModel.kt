@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import com.example.passman.domain.*
 import com.example.passman.presentation.vault.PasswordsData
@@ -19,6 +21,8 @@ class VaultViewModel(val activity: Activity) : ViewModel() {
 
     var vaults by mutableStateOf(listOf<VaultData>())
         private set
+
+    var shareVaultQrCode by mutableStateOf<ImageBitmap?>(null)
 
     private val encryptedStorage = EncryptedStorage(activity)
 
@@ -42,13 +46,9 @@ class VaultViewModel(val activity: Activity) : ViewModel() {
 
 
     fun shareVault(vaultPK: String) {
-        Log.d("SHARE START PK: ",vaultPK)
-
         val privateKey = encryptedStorage.read(vaultPK)
 
-        Log.d("SHARE PRIVATE KEY: ", privateKey)
-        // TODO: display QR CODE
-        // TODO: scan qr code
+        shareVaultQrCode = QrCodeGenerator().getQrCodeBitMap(privateKey,600).asImageBitmap()
     }
 
     fun addPassword(name: String, plainPassword: String, vaultPK: String) {
