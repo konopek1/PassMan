@@ -6,10 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.example.passman.domain.AESCipher
-import com.example.passman.domain.EncryptedStorage
-import com.example.passman.domain.KeyPairGenerator
-import com.example.passman.domain.RSAHelper
+import com.example.passman.domain.*
 import com.example.passman.presentation.vault.PasswordsData
 import com.example.passman.presentation.vault.VaultData
 import com.example.passman.presentation.vault.defaultVaultData
@@ -59,7 +56,22 @@ class VaultViewModel(val activity: Activity) : ViewModel() {
 
         val privateKeyEncoded = encryptedStorage.read(vaultPK)
 
-        RSAHelper().encrypt(privateKeyEncoded,plainPassword)
+        val pass = RSAHelper().encryptWithPrivate(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
+
+        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",pass)
+
+
+        val e = RSAHelper().decryptWithPublic(EncodedRSAKeys(vaultPK,privateKeyEncoded),pass)
+
+        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",e)
+
+
+        val sig = RSAHelper().sign(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
+
+
+        val isValid = RSAHelper().verify(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword, sig)
+
+        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",isValid.toString())
 
         // temp should be invoked in response to api call
         vaults.find { it.publicKey == vaultPK }.also { it?.passwords?.put(name,plainPassword) }

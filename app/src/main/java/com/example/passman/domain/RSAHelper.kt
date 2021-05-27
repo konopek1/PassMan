@@ -1,36 +1,76 @@
 package com.example.passman.domain
 
+import android.R.attr
+import android.security.keystore.KeyProperties
 import android.util.Log
 import java.security.KeyFactory
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.RSAPrivateKeySpec
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
+import android.R.attr.publicKey
+import java.security.PrivateKey
+import java.security.Signature
+import java.security.interfaces.ECPrivateKey
+import java.security.interfaces.RSAPrivateKey
+import java.security.spec.*
+
 
 class RSAHelper {
 
-    fun encrypt(key: String, value: String) {
+    /**
+     * Return base64 encrypted value
+     */
+    fun encryptWithPrivate(keys: EncodedRSAKeys, value: String): String {
         val cipher = Cipher.getInstance("RSA/ECB/NoPadding")
 
-        val keyFactory = KeyFactory.getInstance("RSA")
+        val keys = KeyPairGenerator().decodeKeys(keys)
 
-        val keySpec = RSAPrivateKeySpec(Base64.getEncoder().encode(key.encodeToByteArray()))
+        cipher.init(Cipher.ENCRYPT_MODE,keys.publicKey)
 
-        val encryptionKey = keyFactory.generatePrivate(keySpec)
-
-        cipher.init(Cipher.ENCRYPT_MODE,encryptionKey)
-
-        val e = cipher.doFinal(value.encodeToByteArray())
-
-        Log.d("CRYPTOOOO", e.decodeToString())
+        return toBase64(cipher.doFinal(value.toByteArray()))
     }
 
-    fun decrypt() {
+    fun decryptWithPublic(keys: EncodedRSAKeys, value: String): String {
+        val cipher = Cipher.getInstance("RSA/ECB/NoPadding")
 
+        val keys = KeyPairGenerator().decodeKeys(keys)
+
+        cipher.init(Cipher.DECRYPT_MODE,keys.privateKey)
+
+        return cipher.doFinal(fromBase64(value)).decodeToString()
     }
 
-    fun sign() {
 
+    /**
+     * Return base64 signed message
+     */
+    fun sign(keys: EncodedRSAKeys, value: String): String {
+        val keys = KeyPairGenerator().decodeKeys(keys)
+
+
+        val signature = Signature.getInstance("SHA512withRSA"). run {
+            initSign(keys.privateKey)
+            update(value.toByteArray())
+            sign()
+        }
+
+        return toBase64(signature)
     }
+
+    /**
+     * Return base64 signed message
+     */
+    fun verify(keys: EncodedRSAKeys, value: String, sig: String): Boolean {
+        val keys = KeyPairGenerator().decodeKeys(keys)
+
+        val valid = Signature.getInstance("SHA512withRSA"). run {
+            initVerify(keys.publicKey)
+            update(value.toByteArray())
+            verify(fromBase64(sig))
+        }
+
+        return valid
+    }
+
+
 }

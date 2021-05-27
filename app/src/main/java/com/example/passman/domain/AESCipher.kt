@@ -75,13 +75,12 @@ class AESCipher(val activity: Activity) {
         return metadataSharePreferences.getString(alias, null)
     }
 
+}
 
-    private fun toBase64(byteArray: ByteArray): String {
-        return Base64.getEncoder().encodeToString(byteArray)
-    }
+fun toBase64(byteArray: ByteArray): String {
+    return Base64.getEncoder().encodeToString(byteArray)
+}
 
-    private fun fromBase64(string: String): ByteArray {
-        return Base64.getDecoder().decode(string)
-    }
-
+fun fromBase64(string: String): ByteArray {
+    return Base64.getDecoder().decode(string)
 }
