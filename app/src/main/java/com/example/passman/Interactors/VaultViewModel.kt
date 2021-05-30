@@ -16,21 +16,18 @@ import com.android.volley.toolbox.DiskBasedCache
 import com.android.volley.toolbox.HurlStack
 import com.android.volley.toolbox.JsonObjectRequest
 import com.example.passman.domain.*
-import com.example.passman.presentation.vault.PasswordsData
 import com.example.passman.presentation.vault.VaultData
 import com.example.passman.presentation.vault.defaultVaultData
-import javax.crypto.SecretKey
-import javax.crypto.spec.SecretKeySpec
 
 
-class VaultViewModel(val activity: Activity) : ViewModel() {
+class VaultViewModel(activity: Activity) : ViewModel() {
 
     var vaults by mutableStateOf(listOf<VaultData>())
         private set
 
     var shareVaultQrCode by mutableStateOf<ImageBitmap?>(null)
 
-    private val encryptedStorage = EncryptedStorage(activity)
+    private val encryptedStorage = VaultKeysStorage(activity)
 
     // Instantiate the cache
     val cache = DiskBasedCache(activity.cacheDir, 1024 * 1024) // 1MB cap
