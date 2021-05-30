@@ -9,22 +9,19 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import com.example.passman.domain.*
-import com.example.passman.presentation.vault.PasswordsData
 import com.example.passman.presentation.vault.VaultData
 import com.example.passman.presentation.vault.defaultVaultData
-import javax.crypto.SecretKey
-import javax.crypto.spec.SecretKeySpec
 
 // TODO: dopisac klase do podpisywania
 
-class VaultViewModel(val activity: Activity) : ViewModel() {
+class VaultViewModel(activity: Activity) : ViewModel() {
 
     var vaults by mutableStateOf(listOf<VaultData>())
         private set
 
     var shareVaultQrCode by mutableStateOf<ImageBitmap?>(null)
 
-    private val encryptedStorage = EncryptedStorage(activity)
+    private val encryptedStorage = VaultKeysStorage(activity)
 
     init {
         // TODO: api call -> on start fetch tha from api
