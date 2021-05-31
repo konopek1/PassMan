@@ -156,13 +156,30 @@ class VaultViewModel(activity: Activity) : ViewModel() {
 
     fun invokeReq(url :String, data:String, onResponse : Response.Listener<String>){
 
+        Log.d("REQUEST", "Sending request to " + url + "\n with:\n" +data);
         val req: StringRequest = object : StringRequest(Method.POST, url, onResponse,
-            Response.ErrorListener { // error
-                //todo handle error
+            { error ->
+                //todo show error message
+                if(error.networkResponse != null && error.networkResponse.data != null )
+                {
+                    val resp = Json.decodeFromString<SuccessResponse>(error.networkResponse.data.decodeToString())
+                    Log.d("REQUEST RESPONSE ERROR", resp.status)
+                }
+                else
+                {
+                    Log.d("REQUEST RESPONSE ERROR ", "ERRMSG:"+error.message)
+                }
+
             }
         ) {
             override fun getBody(): ByteArray {
                 return data.toByteArray()
+            }
+
+            override fun getHeaders(): MutableMap<String, String> {
+                return mutableMapOf(
+                    "Content-Type" to "application/json"
+                )
             }
         }
 
