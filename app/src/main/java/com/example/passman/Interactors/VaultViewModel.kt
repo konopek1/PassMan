@@ -82,7 +82,7 @@ class VaultViewModel(activity: Activity) : ViewModel() {
                 if(r.status == "success")
                 {
                     vaults = vaults + VaultData(r.data.name,pubk,
-                        r.data.keys.map { it.name to RSAHelper().decryptWithPublic(EncodedRSAKeys(pubk,privk),it.value) }.toMutableStateMap())
+                        r.data.keys.map { it.name to RSAHelper().decryptWithPrivate(EncodedRSAKeys(pubk,privk),it.value) }.toMutableStateMap())
                 }
                 else {
                     // TODO: Handle error
@@ -133,7 +133,7 @@ class VaultViewModel(activity: Activity) : ViewModel() {
         val endpoint = "/pass/add"
         val privateKeyEncoded = encryptedStorage.read(vaultPK)
 
-        val pass = RSAHelper().encryptWithPrivate(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
+        val pass = RSAHelper().encryptWithPublic(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
 
         val req = makeReq(mapOf(
             "public_key" to vaultPK,
