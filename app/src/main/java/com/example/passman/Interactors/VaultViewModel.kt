@@ -53,12 +53,12 @@ class VaultViewModel(activity: Activity) : ViewModel() {
 
         val privateKeyEncoded = encryptedStorage.read(vaultPK)
 
-        val pass = RSAHelper().encryptWithPrivate(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
+        val pass = RSAHelper().encryptWithPublic(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
 
         Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",pass)
 
 
-        val e = RSAHelper().decryptWithPublic(EncodedRSAKeys(vaultPK,privateKeyEncoded),pass)
+        val e = RSAHelper().decryptWithPrivate(EncodedRSAKeys(vaultPK,privateKeyEncoded),pass)
 
         Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",e)
 

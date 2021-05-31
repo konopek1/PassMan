@@ -9,20 +9,20 @@ class RSAHelper {
     /**
      * Return base64 encrypted value
      */
-    fun encryptWithPrivate(keys: EncodedRSAKeys, value: String): String {
+    fun encryptWithPublic(encodedKeys: EncodedRSAKeys, value: String): String {
         val cipher = Cipher.getInstance("RSA/ECB/NoPadding")
 
-        val keys = KeyPairGenerator().decodeKeys(keys)
+        val keys = KeyPairGenerator().decodeKeys(encodedKeys)
 
         cipher.init(Cipher.ENCRYPT_MODE,keys.publicKey)
 
         return toBase64(cipher.doFinal(value.toByteArray()))
     }
 
-    fun decryptWithPublic(keys: EncodedRSAKeys, value: String): String {
+    fun decryptWithPrivate(encodedKeys: EncodedRSAKeys, value: String): String {
         val cipher = Cipher.getInstance("RSA/ECB/NoPadding")
 
-        val keys = KeyPairGenerator().decodeKeys(keys)
+        val keys = KeyPairGenerator().decodeKeys(encodedKeys)
 
         cipher.init(Cipher.DECRYPT_MODE,keys.privateKey)
 
