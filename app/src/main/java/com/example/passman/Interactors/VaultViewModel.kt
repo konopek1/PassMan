@@ -2,22 +2,42 @@ package com.example.passman.Interactors
 
 import android.app.Activity
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.Response
-import com.android.volley.toolbox.BasicNetwork
-import com.android.volley.toolbox.DiskBasedCache
-import com.android.volley.toolbox.HurlStack
-import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.*
 import com.example.passman.domain.*
 import com.example.passman.presentation.vault.VaultData
-import com.example.passman.presentation.vault.defaultVaultData
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
+
+import com.android.volley.toolbox.StringRequest
+
+
+
+
+
+@Serializable
+data class ApiPass(val name: String, val value: String)
+
+@Serializable
+data class ApiVaultGetData(val keys:List<ApiPass>, val name:String)
+
+@Serializable
+data class ApiReq(val data:Map<String,String>, val sign:String)
+
+
+@Serializable
+data class SuccessResponse(val status:String)
+@Serializable
+data class ApiVaultGetResponse(val data:ApiVaultGetData,val status :String)
+
+
+
 
 
 class VaultViewModel(activity: Activity) : ViewModel() {
@@ -47,21 +67,29 @@ class VaultViewModel(activity: Activity) : ViewModel() {
     init {
         val endpoint = "/vault/get"
 
-        val jsonObjectRequest = JsonObjectRequest(Request.Method.GET, baseUrl+endpoint, null,
-            { response ->
-                response.toString()
-            },
-            { error ->
-                // TODO: Handle error
-            }
-        )
+        val pubks = encryptedStorage.getAllPublicKeys()
 
+        for(pubk in pubks)
+        {
+            val privk = encryptedStorage.read(pubk)
 
-// Access the RequestQueue through your singleton class.
-        requestQueue.add(jsonObjectRequest)
-        vaults.get(0).
+            val req = makeReq(mapOf(
+                "public_key" to pubk,
+            ),pubk)
 
-        vaults = vaults + defaultVaultData
+            invokeReq(baseUrl+endpoint, req,{ response ->
+                val r = Json.decodeFromString<ApiVaultGetResponse>(response.toString())
+                if(r.status == "success")
+                {
+                    vaults = vaults + VaultData(r.data.name,pubk,
+                        r.data.keys.map { it.name to RSAHelper().decryptWithPublic(EncodedRSAKeys(pubk,privk),it.value) }.toMutableStateMap())
+                }
+                else {
+                    // TODO: Handle error
+                    Log.d("ERROR MAKING REQ: ", r.status)
+                }
+            } )
+        }
     }
 
     fun createVault(name: String) {
@@ -72,17 +100,25 @@ class VaultViewModel(activity: Activity) : ViewModel() {
 
         encryptedStorage.write(keyPair.publicKey,keyPair.privateKey)
 
-        val jsonObjectRequest = JsonObjectRequest(Request.Method.GET, baseUrl+endpoint, null,
-            { response ->
-                response.toString()
-            },
-            { error ->
-                // TODO: Handle error
-            }
-        )
+        val req = makeReq(mapOf(
+            "public_key" to keyPair.publicKey,
+            "name" to name
+        ),keyPair.publicKey)
 
-        // temp should be invoked in response to api call
-        vaults = vaults + listOf(VaultData(name, keyPair.publicKey, mutableMapOf()))
+        invokeReq(baseUrl+endpoint,req,{ response ->
+            val r = Json.decodeFromString<SuccessResponse>(response.toString())
+            if(r.status == "success")
+            {
+                vaults = vaults + listOf(VaultData(name, keyPair.publicKey, mutableMapOf()))
+            }
+            else
+            {
+                //todo handle error
+                Log.d("ERROR MAKING REQ: ", r.status)
+            }
+        })
+
+
     }
 
 
@@ -94,29 +130,50 @@ class VaultViewModel(activity: Activity) : ViewModel() {
 
     fun addPassword(name: String, plainPassword: String, vaultPK: String) {
         // TODO: api call -> add password to vault && vault[name] = passwords + new password
-
+        val endpoint = "/pass/add"
         val privateKeyEncoded = encryptedStorage.read(vaultPK)
 
         val pass = RSAHelper().encryptWithPrivate(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
 
-        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",pass)
+        val req = makeReq(mapOf(
+            "public_key" to vaultPK,
+            "name" to name,
+            "value" to pass
+        ),vaultPK)
 
-
-        val e = RSAHelper().decryptWithPublic(EncodedRSAKeys(vaultPK,privateKeyEncoded),pass)
-
-        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",e)
-
-
-        val sig = RSAHelper().sign(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
-
-
-        val isValid = RSAHelper().verify(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword, sig)
-
-        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",isValid.toString())
-
+        invokeReq(baseUrl+endpoint, req, { response ->
+            val r = Json.decodeFromString<SuccessResponse>(response.toString())
+            if (r.status == "success") {
+                vaults.find { it.publicKey == vaultPK }.also { it?.passwords?.put(name,plainPassword) }
+            } else {
+                //todo handle error
+                Log.d("ERROR MAKING REQ: ", r.status)
+            }
+        })
         // temp should be invoked in response to api call
-        vaults.find { it.publicKey == vaultPK }.also { it?.passwords?.put(name,plainPassword) }
+
     }
 
+    fun invokeReq(url :String, data:String, onResponse : Response.Listener<String>){
 
+        val req: StringRequest = object : StringRequest(Method.POST, url, onResponse,
+            Response.ErrorListener { // error
+                //todo handle error
+            }
+        ) {
+            override fun getBody(): ByteArray {
+                return data.toByteArray()
+            }
+        }
+
+        requestQueue.add(req)
+    }
+
+    fun makeReq(data: Map<String, String>, vaultPK: String): String {
+        val privateKey = encryptedStorage.read(vaultPK)
+        val signature =  RSAHelper().sign(EncodedRSAKeys(vaultPK, privateKey), Json.encodeToString(data));
+
+        Log.d("SIGNED: ", Json.encodeToString(data) + " AS " + signature)
+        return Json.encodeToString(ApiReq(data, signature))
+    }
 }
