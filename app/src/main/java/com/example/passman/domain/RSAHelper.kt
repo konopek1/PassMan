@@ -26,7 +26,11 @@ class RSAHelper {
 
         cipher.init(Cipher.DECRYPT_MODE,keys.privateKey)
 
-        return cipher.doFinal(fromBase64(value)).decodeToString()
+        val bytes = cipher.doFinal(fromBase64(value)).filter { byte -> byte.compareTo(0) != 0 }
+
+        val decrypted = bytes.toByteArray().decodeToString()
+
+        return decrypted
     }
 
 
