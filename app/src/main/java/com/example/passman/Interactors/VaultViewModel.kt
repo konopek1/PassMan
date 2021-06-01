@@ -81,8 +81,9 @@ class VaultViewModel(activity: Activity) : ViewModel() {
                 val r = Json.decodeFromString<ApiVaultGetResponse>(response.toString())
                 if(r.status == "success")
                 {
-                    vaults = vaults + VaultData(r.data.name,pubk,
-                        r.data.keys.map { it.name to RSAHelper().decryptWithPrivate(EncodedRSAKeys(pubk,privk),it.value) }.toMutableStateMap())
+                    val passmap = r.data.keys.map { it.name to RSAHelper().decryptWithPrivate(EncodedRSAKeys(pubk,privk),it.value) }.toMutableStateMap()
+                    passmap.forEach { k, v -> Log.d("PASSWORDS","$k = (${v.length})$v") }
+                    vaults = vaults + VaultData(r.data.name,pubk,passmap)
                 }
                 else {
                     // TODO: Handle error
