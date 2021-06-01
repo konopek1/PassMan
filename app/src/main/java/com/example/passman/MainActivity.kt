@@ -2,14 +2,15 @@ package com.example.passman
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.*
@@ -17,18 +18,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.passman.Interactors.VaultViewModel
+import com.example.passman.presentation.vault.VaultData
+import com.example.passman.presentation.vault.passwords.Passwords
 import com.example.passman.ui.theme.PassManTheme
 import com.example.passman.ui.theme.Shapes
 import com.example.passman.ui.theme.Typography
-import com.example.passman.presentation.vault.VaultData
-import com.example.passman.Interactors.VaultViewModel
-import com.example.passman.domain.QrCodeGenerator
-import com.example.passman.presentation.vault.passwords.Passwords
-import kotlin.reflect.KMutableProperty
 
 
 class MainActivity : ComponentActivity() {
@@ -236,8 +234,8 @@ fun VaultList(
     AddVaultInputDialog(onVaultCreate, setOpen, isNewVaultDialogOpen)
 
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -276,6 +274,7 @@ fun AddVaultInputDialog(
                 Button(onClick = {
                     onVaultAdd(name)
                     setOpen(false)
+                    setName("")
                 }) {
                     Text("Create")
                 }
