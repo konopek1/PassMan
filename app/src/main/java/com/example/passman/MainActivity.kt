@@ -1,8 +1,9 @@
 package com.example.passman
 
-import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -18,10 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.passman.Interactors.VaultViewModel
+import com.example.passman.domain.EncodedRSAKeys
 import com.example.passman.presentation.vault.VaultData
 import com.example.passman.presentation.vault.passwords.Passwords
 import com.example.passman.ui.theme.PassManTheme
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
                 vaultViewModel::createVault,
                 vaultViewModel::shareVault,
                 vaultViewModel.shareVaultQrCode,
+                vaultViewModel::importVault
             )
         }
     }
@@ -55,10 +57,14 @@ fun App(
     onVaultCreate: (String) -> Unit,
     onShareVault: (String) -> Unit,
     shareVaultQrCode: ImageBitmap?,
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    onImportVault: (EncodedRSAKeys) -> Unit,
+    darkTheme: Boolean = isSystemInDarkTheme()
+
 ) {
     var darkThemeState by remember { mutableStateOf(darkTheme) }
     val updateDarkThemeState = { darkThemeState = !darkThemeState }
+
+
 
     PassManTheme(darkThemeState) {
         Column(
@@ -67,16 +73,18 @@ fun App(
                 .fillMaxWidth()
                 .background(if (!darkThemeState) Color.White else Color.Black)
         ) {
-            TopBar(darkThemeState, updateDarkThemeState)
+            TopBar(darkThemeState, updateDarkThemeState, onImportVault)
             VaultList(vaultData, onPasswordAdd, onVaultCreate, onShareVault, shareVaultQrCode)
         }
     }
 }
 
 @Composable
-fun TopBar(darkTheme: Boolean, updateDarkThemeState: () -> Unit) {
-    val context = LocalContext.current
-
+fun TopBar(darkTheme: Boolean, updateDarkThemeState: () -> Unit, onImportVault: (EncodedRSAKeys) -> Unit) {
+    val launcher = rememberLauncherForActivityResult(contract = QrCodeScannerContract()) {
+        onImportVault(it)
+        Log.d("Vault import", "imported vault: $it")
+    }
 
     TopAppBar(
         title = { Text("PassMan") },
@@ -87,7 +95,7 @@ fun TopBar(darkTheme: Boolean, updateDarkThemeState: () -> Unit) {
         },
         actions = {
             Row() {
-                IconButton(onClick = {context.startActivity(Intent(context, QrCodeScannerActivity::class.java))}) {
+                IconButton(onClick = {launcher.launch(null)}) {
                     Icon(Icons.Filled.Call, contentDescription = "Import vault")
                 }
         
@@ -120,6 +128,8 @@ fun Vault(
 ) {
     val passwordsVisible = remember { mutableStateOf(false) }
     val openQrDialog = remember { mutableStateOf(false) }
+
+
 
     Card(
         Modifier.fillMaxWidth(0.85f)
@@ -234,7 +244,9 @@ fun VaultList(
     AddVaultInputDialog(onVaultCreate, setOpen, isNewVaultDialogOpen)
 
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth(),
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(10.dp))

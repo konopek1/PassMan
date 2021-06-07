@@ -1,11 +1,14 @@
 package com.example.passman
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.budiyev.android.codescanner.*
+import com.example.passman.domain.VaultKeysStorage
+import com.google.zxing.BarcodeFormat
 
-// TODO use result from this activity
 class QrCodeScannerActivity : AppCompatActivity() {
     private lateinit var codeScanner: CodeScanner
 
@@ -18,7 +21,7 @@ class QrCodeScannerActivity : AppCompatActivity() {
 
         // Parameters (default values)
         codeScanner.camera = CodeScanner.CAMERA_BACK // or CAMERA_FRONT or specific camera id
-        codeScanner.formats = CodeScanner.ALL_FORMATS // list of type BarcodeFormat,
+        codeScanner.formats = listOf(BarcodeFormat.QR_CODE) // list of type BarcodeFormat,
         // ex. listOf(BarcodeFormat.QR_CODE)
         codeScanner.autoFocusMode = AutoFocusMode.SAFE // or CONTINUOUS
         codeScanner.scanMode = ScanMode.SINGLE // or CONTINUOUS or PREVIEW
@@ -27,21 +30,24 @@ class QrCodeScannerActivity : AppCompatActivity() {
 
         // Callbacks
         codeScanner.decodeCallback = DecodeCallback {
-            runOnUiThread {
-                Toast.makeText(this, "Scan result: ${it.text}", Toast.LENGTH_LONG).show()
-            }
+            val result = Intent().putExtra("QR",it.text)
+            setResult(Activity.RESULT_OK, result)
+            finish()
         }
+
         codeScanner.errorCallback = ErrorCallback { // or ErrorCallback.SUPPRESS
             runOnUiThread {
                 Toast.makeText(this, "Camera initialization error: ${it.message}",
                     Toast.LENGTH_LONG).show()
             }
+
         }
 
         scannerView.setOnClickListener {
             codeScanner.startPreview()
         }
     }
+
 
     override fun onResume() {
         super.onResume()

@@ -11,8 +11,7 @@ import androidx.lifecycle.ViewModel
 import com.example.passman.domain.*
 import com.example.passman.presentation.vault.VaultData
 import com.example.passman.presentation.vault.defaultVaultData
-
-// TODO: dopisac klase do podpisywania
+import java.security.PublicKey
 
 class VaultViewModel(activity: Activity) : ViewModel() {
 
@@ -31,8 +30,6 @@ class VaultViewModel(activity: Activity) : ViewModel() {
     fun createVault(name: String) {
         val keyPair = KeyPairGenerator().generate()
 
-        Log.d("SHARE START PK: ",keyPair.publicKey)
-
         encryptedStorage.write(keyPair.publicKey,keyPair.privateKey)
         // TODO: api call -> create new vault && vaults = vaults + new vault
         // but don't touch private key
@@ -41,34 +38,20 @@ class VaultViewModel(activity: Activity) : ViewModel() {
         vaults = vaults + listOf(VaultData(name, keyPair.publicKey, mutableMapOf()))
     }
 
+    fun importVault(keyPair: EncodedRSAKeys) {
+        encryptedStorage.write(keyPair.publicKey,keyPair.publicKey)
+
+        // TODO: Radek tutaj dodaj żeby pobierał hasła do tego sejfu nowego
+    }
+
 
     fun shareVault(vaultPK: String) {
         val privateKey = encryptedStorage.read(vaultPK)
 
-        shareVaultQrCode = QrCodeGenerator().getQrCodeBitMap(privateKey,600).asImageBitmap()
+        shareVaultQrCode = QrCodeGenerator().getQrCodeBitMap("$vaultPK|$privateKey",600).asImageBitmap()
     }
 
     fun addPassword(name: String, plainPassword: String, vaultPK: String) {
-        // TODO: api call -> add password to vault && vault[name] = passwords + new password
-
-        val privateKeyEncoded = encryptedStorage.read(vaultPK)
-
-        val pass = RSAHelper().encryptWithPublic(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
-
-        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",pass)
-
-
-        val e = RSAHelper().decryptWithPrivate(EncodedRSAKeys(vaultPK,privateKeyEncoded),pass)
-
-        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",e)
-
-
-        val sig = RSAHelper().sign(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
-
-
-        val isValid = RSAHelper().verify(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword, sig)
-
-        Log.d("asdasdaasdasdasdasd ((((((((((((((((((((S",isValid.toString())
 
         // temp should be invoked in response to api call
         vaults.find { it.publicKey == vaultPK }.also { it?.passwords?.put(name,plainPassword) }
