@@ -11,6 +11,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Share
@@ -65,7 +66,6 @@ fun App(
     val updateDarkThemeState = { darkThemeState = !darkThemeState }
 
 
-
     PassManTheme(darkThemeState) {
         Column(
             modifier = Modifier
@@ -86,19 +86,25 @@ fun TopBar(darkTheme: Boolean, updateDarkThemeState: () -> Unit, onImportVault: 
         Log.d("Vault import", "imported vault: $it")
     }
 
+    var showMenu by remember { mutableStateOf(false) }
+
     TopAppBar(
         title = { Text("PassMan") },
         navigationIcon = {
-            IconButton(onClick = { /* doSomething() */ }) {
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(onClick = { launcher.launch(null); showMenu = false; }) {
+                    Text("Import vault")
+                }
+            }
+            IconButton(onClick = { showMenu = true }) {
                 Icon(Icons.Filled.Menu, contentDescription = null)
             }
         },
         actions = {
             Row() {
-                IconButton(onClick = {launcher.launch(null)}) {
-                    Icon(Icons.Filled.Call, contentDescription = "Import vault")
-                }
-        
                 IconButton(onClick = { updateDarkThemeState() }) {
                     if (darkTheme) {
                         Icon(
