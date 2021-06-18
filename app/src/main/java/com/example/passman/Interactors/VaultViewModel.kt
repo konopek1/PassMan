@@ -19,6 +19,8 @@ import com.android.volley.toolbox.StringRequest
 import com.example.passman.api.ApiInterface
 import com.example.passman.api.ApiVaultGetResponse
 import com.example.passman.api.SuccessResponse
+import com.example.passman.presentation.vault.defaultVaultData
+import java.security.PublicKey
 
 class VaultViewModel(activity: Activity) : ViewModel() {
 
@@ -61,8 +63,6 @@ class VaultViewModel(activity: Activity) : ViewModel() {
 
         val keyPair = KeyPairGenerator().generate()
 
-        Log.d("SHARE START PK: ",keyPair.publicKey)
-
         encryptedStorage.write(keyPair.publicKey,keyPair.privateKey)
 
         api.newVault(name,keyPair.publicKey) { response ->
@@ -76,10 +76,17 @@ class VaultViewModel(activity: Activity) : ViewModel() {
         }
     }
 
+    fun importVault(keyPair: EncodedRSAKeys) {
+        encryptedStorage.write(keyPair.publicKey,keyPair.publicKey)
+
+        // TODO: Radek tutaj dodaj żeby pobierał hasła do tego sejfu nowego
+    }
+
+
     fun shareVault(vaultPK: String) {
         val privateKey = encryptedStorage.read(vaultPK)
 
-        shareVaultQrCode = QrCodeGenerator().getQrCodeBitMap(privateKey,600).asImageBitmap()
+        shareVaultQrCode = QrCodeGenerator().getQrCodeBitMap("$vaultPK|$privateKey",600).asImageBitmap()
     }
 
     fun addPassword(name: String, plainPassword: String, vaultPK: String) {
