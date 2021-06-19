@@ -1,6 +1,7 @@
 package com.example.passman.api
 
 import android.util.Log
+import androidx.compose.runtime.toMutableStateMap
 import com.android.volley.RequestQueue
 import com.android.volley.Response
 import com.android.volley.toolbox.BasicNetwork
@@ -47,18 +48,27 @@ class ApiInterface(
 
     val baseUrl = "http://192.168.0.12:3000"
 
-    fun getVault(pubk : String, onResponse : Response.Listener<String>) {
+    fun getVault(pubk : String, onResponse : (ApiVaultGetResponse) -> Unit) {
         val endpoint = "/vault/get"
 
         val req = makeReq(mapOf(
             "public_key" to pubk,
         ),pubk)
 
-        invokeReq(baseUrl+endpoint, req, onResponse)
+        invokeReq(baseUrl+endpoint, req) { response ->
+            val r = Json.decodeFromString<ApiVaultGetResponse>(response.toString())
+
+            if (r.status == "success") {
+                onResponse(r)
+            } else {
+                // TODO: Handle error
+                Log.d("ERROR MAKING REQ: ", r.status)
+            }
+        }
 
     }
 
-    fun newVault(name : String, pubk: String, onResponse : Response.Listener<String>) {
+    fun newVault(name : String, pubk: String, onResponse : (SuccessResponse) -> Unit) {
         val endpoint = "/vault/new"
 
         val req = makeReq(mapOf(
@@ -66,10 +76,18 @@ class ApiInterface(
             "name" to name
         ),pubk)
 
-        invokeReq(baseUrl+endpoint,req,onResponse)
+        invokeReq(baseUrl+endpoint,req) { response ->
+            val r = Json.decodeFromString<SuccessResponse>(response.toString())
+            if (r.status == "success") {
+                onResponse(r)
+            } else {
+                // TODO: Handle error
+                Log.d("ERROR MAKING REQ: ", r.status)
+            }
+        }
     }
 
-    fun addPass(name : String, pass: String, pk: String, onResponse : Response.Listener<String>){
+    fun addPass(name : String, pass: String, pk: String, onResponse : (SuccessResponse) -> Unit){
         val endpoint = "/pass/add"
 
         val req = makeReq(mapOf(
@@ -77,9 +95,19 @@ class ApiInterface(
             "name" to name,
             "value" to pass
         ),pk)
+
+        invokeReq(baseUrl+endpoint,req) { response ->
+            val r = Json.decodeFromString<SuccessResponse>(response.toString())
+            if (r.status == "success") {
+                onResponse(r)
+            } else {
+                // TODO: Handle error
+                Log.d("ERROR MAKING REQ: ", r.status)
+            }
+        }
     }
 
-    fun invokeReq(url :String, data:String, onResponse : Response.Listener<String>){
+    private fun invokeReq(url :String, data:String, onResponse : Response.Listener<String>){
 
         Log.d("REQUEST", "Sending request to " + url + "\n with:\n" +data);
         val req: StringRequest = object : StringRequest(Method.POST, url, onResponse,
@@ -111,7 +139,7 @@ class ApiInterface(
         requestQueue.add(req)
     }
 
-    fun makeReq(data: Map<String, String>, vaultPK: String): String {
+    private fun makeReq(data: Map<String, String>, vaultPK: String): String {
         val privateKey = encryptedStorage.read(vaultPK)
         val signature =  RSAHelper().sign(EncodedRSAKeys(vaultPK, privateKey), Json.encodeToString(data));
 

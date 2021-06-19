@@ -34,27 +34,19 @@ class VaultViewModel(activity: Activity) : ViewModel() {
     private val api = ApiInterface(encryptedStorage,DiskBasedCache(activity.cacheDir, 1024 * 1024))
 
     init {
-        val endpoint = "/vault/get"
-
         val pubks = encryptedStorage.getAllPublicKeys()
-
+        // get all vaults
         for(pubk in pubks)
         {
             val privk = encryptedStorage.read(pubk)
 
-            api.getVault(pubk) { response ->
-                val r = Json.decodeFromString<ApiVaultGetResponse>(response.toString())
-                if (r.status == "success") {
-                    val passmap = r.data.keys.map {
-                        it.name to RSAHelper().decryptWithPrivate(EncodedRSAKeys(pubk,
-                            privk), it.value)
-                    }.toMutableStateMap()
-                    passmap.forEach { k, v -> Log.d("PASSWORDS", "$k = (${v.length})$v") }
-                    vaults = vaults + VaultData(r.data.name, pubk, passmap)
-                } else {
-                    // TODO: Handle error
-                    Log.d("ERROR MAKING REQ: ", r.status)
-                }
+            api.getVault(pubk) { r ->
+                val passmap = r.data.keys.map {
+                    it.name to RSAHelper().decryptWithPrivate(EncodedRSAKeys(pubk,
+                        privk), it.value)
+                }.toMutableStateMap()
+                passmap.forEach { (k, v) -> Log.d("PASSWORDS", "$k = (${v.length})$v") }
+                vaults = vaults + VaultData(r.data.name, pubk, passmap)
             }
         }
     }
@@ -65,21 +57,22 @@ class VaultViewModel(activity: Activity) : ViewModel() {
 
         encryptedStorage.write(keyPair.publicKey,keyPair.privateKey)
 
-        api.newVault(name,keyPair.publicKey) { response ->
-            val r = Json.decodeFromString<SuccessResponse>(response.toString())
-            if (r.status == "success") {
-                vaults = vaults + listOf(VaultData(name, keyPair.publicKey, mutableMapOf()))
-            } else {
-                //todo handle error
-                Log.d("ERROR MAKING REQ: ", r.status)
-            }
+        api.newVault(name,keyPair.publicKey) { r->
+            vaults = vaults + listOf(VaultData(name, keyPair.publicKey, mutableMapOf()))
         }
     }
 
     fun importVault(keyPair: EncodedRSAKeys) {
         encryptedStorage.write(keyPair.publicKey,keyPair.publicKey)
 
-        // TODO: Radek tutaj dodaj żeby pobierał hasła do tego sejfu nowego
+        api.getVault(keyPair.publicKey) { r ->
+            val passmap = r.data.keys.map {
+                it.name to RSAHelper().decryptWithPrivate(EncodedRSAKeys(keyPair.publicKey,
+                    keyPair.publicKey), it.value)
+            }.toMutableStateMap()
+            passmap.forEach { (k, v) -> Log.d("PASSWORDS", "$k = (${v.length})$v") }
+            vaults = vaults + VaultData(r.data.name,keyPair.publicKey, passmap)
+        }
     }
 
 
@@ -95,15 +88,9 @@ class VaultViewModel(activity: Activity) : ViewModel() {
 
         val pass = RSAHelper().encryptWithPublic(EncodedRSAKeys(vaultPK,privateKeyEncoded),plainPassword)
 
-        api.addPass(name,pass,vaultPK) { response ->
-            val r = Json.decodeFromString<SuccessResponse>(response.toString())
-            if (r.status == "success") {
-                vaults.find { it.publicKey == vaultPK }
-                    .also { it?.passwords?.put(name, plainPassword) }
-            } else {
-                //todo handle error
-                Log.d("ERROR MAKING REQ: ", r.status)
-            }
+        api.addPass(name,pass,vaultPK) { r ->
+            vaults.find { it.publicKey == vaultPK }
+                .also{ it?.passwords?.put(name, plainPassword) }
         }
     }
 }
