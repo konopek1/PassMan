@@ -63,12 +63,12 @@ class VaultViewModel(activity: Activity) : ViewModel() {
     }
 
     fun importVault(keyPair: EncodedRSAKeys) {
-        encryptedStorage.write(keyPair.publicKey,keyPair.publicKey)
+        encryptedStorage.write(keyPair.publicKey,keyPair.privateKey)
 
         api.getVault(keyPair.publicKey) { r ->
             val passmap = r.data.keys.map {
                 it.name to RSAHelper().decryptWithPrivate(EncodedRSAKeys(keyPair.publicKey,
-                    keyPair.publicKey), it.value)
+                    keyPair.privateKey), it.value)
             }.toMutableStateMap()
             passmap.forEach { (k, v) -> Log.d("PASSWORDS", "$k = (${v.length})$v") }
             vaults = vaults + VaultData(r.data.name,keyPair.publicKey, passmap)

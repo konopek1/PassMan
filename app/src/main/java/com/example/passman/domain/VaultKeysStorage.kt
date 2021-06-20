@@ -7,6 +7,8 @@ import com.example.passman.R
 
 class VaultKeysStorage(val activity: Activity) {
 
+    public val context = activity
+
     private val masterKey by lazy { MasterKey(activity) }
 
     private val sharedPreferencesKey by lazy { activity.getString(R.string.vault_keys) }

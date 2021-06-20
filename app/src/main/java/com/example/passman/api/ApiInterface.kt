@@ -1,6 +1,7 @@
 package com.example.passman.api
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.toMutableStateMap
 import com.android.volley.RequestQueue
 import com.android.volley.Response
@@ -46,7 +47,7 @@ class ApiInterface(
     }
     private val encryptedStorage : VaultKeysStorage = estore;
 
-    val baseUrl = "http://192.168.0.12:3000"
+    val baseUrl = "http://172.18.120.215:3000"
 
     fun getVault(pubk : String, onResponse : (ApiVaultGetResponse) -> Unit) {
         val endpoint = "/vault/get"
@@ -123,11 +124,17 @@ class ApiInterface(
                     Log.d("REQUEST RESPONSE ERROR ", "ERRMSG:"+error.message)
                 }
 
+                encryptedStorage.context.runOnUiThread {
+                    Toast.makeText(encryptedStorage.context, "Network error!",
+                        Toast.LENGTH_LONG).show()
+                }
+
             }
         ) {
             override fun getBody(): ByteArray {
                 return data.toByteArray()
             }
+
 
             override fun getHeaders(): MutableMap<String, String> {
                 return mutableMapOf(
